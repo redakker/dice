@@ -1,2 +1,2 @@
-# dice
-LED dice light with effects 
+# Dice
+LED dice light with effects
