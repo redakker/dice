@@ -15,12 +15,14 @@
 #include "wifi.cpp"
 #include "webserver.cpp"
 #include "mqtt.cpp"
+#include "bluetooth.cpp"
 
 Log rlog;
 Led led(rlog);
 Database database(rlog);
 Wifi wifi(rlog);
 Webserver webserver(rlog);
+BlueTooth blueTooth(rlog);
 Mqtt mqtt(rlog);
 
 ////////////////////////////////////////////////////////////
@@ -68,6 +70,7 @@ void setup() {
   led.setup();
   database.setup();
   wifi.setup(database, wifiStatusChanged, errorCodeChanged);
+  blueTooth.setup(messageArrived); 
 
   module.setup(mqttMessageSend);
   
@@ -91,6 +94,7 @@ void loop() {
   wifi.loop();
   webserver.loop();
   mqtt.loop();
+  blueTooth.loop();
 
   module.loop();
 

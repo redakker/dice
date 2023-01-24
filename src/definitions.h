@@ -20,6 +20,14 @@
 #define MQTT_STATUS_ON "{\"status\": \"on\"}"
 #define MQTT_STATUS_OFF "{\"status\": \"off\"}"
 
+// DICE COMMNANDS
+#define PROPERTY_COMMAND "command"
+#define PROPERTY_SPEED "speed"
+#define PROPERTY_COUNT "count"
+#define PROPERTY_INFINITY "infinity"
+#define PROPERTY_COLOR "color"
+
+
 // Network
 #define WIFI_MAX_TRY 10
 
