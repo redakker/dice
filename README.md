@@ -6,7 +6,7 @@ If you want to follow the (hardware making) project in pictures then please chec
 
 ## Code
 
-You can this code in VS code with a PlatformIO plugin in it.
+You can build this code in VS code with a PlatformIO plugin in it.
 
 ## Hardware (electrocics)
 
