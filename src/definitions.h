@@ -27,6 +27,9 @@
 #define PROPERTY_INFINITY "infinity"
 #define PROPERTY_COLOR "color"
 
+// Brightness control is skipped under this animation speed
+#define BRIGHTNESS_CONTROL_TIME_LIMIT 800
+
 
 // Network
 #define WIFI_MAX_TRY 10

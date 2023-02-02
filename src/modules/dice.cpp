@@ -27,10 +27,11 @@ class Dice {
     CRGB leds[NUM_LEDS];    
 
     // Variables which can be modified from outside    
-    int animationSpeed = 200;
-    int animationCount = 5;
+    float animationSpeed = 200.0;
+    int animationCount = 1;
     bool infinityAnimation = false;
-    String currentColor = "#FF1493"; // CRGB::DeepPink;
+    String currentColor = "#FF8000";
+    bool skipBrightnessControl = false;
 
 
     // Command set which is available from outside
@@ -46,6 +47,8 @@ class Dice {
     command currentCommand = singleColor;
     int currentDiceNumber = 1; // Always shows the real number (not an array style)
     int lastAnimationTime = 0; // Handle the delay with this (avoid delay() function)
+    int lastFadeTime = 0; // Fade up light animation timer
+    float brightness = 0;
     
     public:
         Dice(Log &rlog) {
@@ -66,53 +69,69 @@ class Dice {
 
         void loop() {
 
-            // Always give some time to Fastled to show
-            if (animationSpeed < 10) {
-                animationSpeed = 10;
+            // Fade up light
+            if (!skipBrightnessControl) {
+                if (millis() - lastFadeTime > 20) {
+                    if (brightness == 0) {
+                        brightness = 1.2;
+                    }
+
+                    lastFadeTime = millis();
+                    brightness = brightness * 1.2;
+                    if (brightness > 255) {
+                        brightness = 255;
+                    }
+                }
+            } else {
+                brightness = 255;
             }
 
-            if (animationCount > 0 || infinityAnimation) {
-                
-                if (millis() - lastAnimationTime > animationSpeed) {
-                    
+            if (animationSpeed >= BRIGHTNESS_CONTROL_TIME_LIMIT) {
+                skipBrightnessControl = false;
+            }
+
+            if ((animationCount > 0 || infinityAnimation) && brightness == 255) {                
+                if (millis() - lastAnimationTime > animationSpeed) {                    
                     lastAnimationTime = millis();
 
                     // Strip does the animation which is in the command
                     switch (currentCommand)
                     {
-                    case singleColor:
-                        colorizeLedStrip();
-                        break;
-                    case rollTheDice:
-                        rollDice();
-                        break;
-                    case rollTheDiceAnimated:
-                        rollDiceAnimated();
-                        break;
-                    case orderRun:
-                        countUp();
-                        setDiceNumber(currentDiceNumber);
-                        break;
-                    case ReverseOrderRun:
-                        countDown();
-                        setDiceNumber(currentDiceNumber);
-                        break;
-                    
-                    default:
-                        resetLedStrip();
-                        break;
+                        case singleColor:
+                            colorizeLedStrip();
+                            break;
+                        case rollTheDice:
+                            rollDice();
+                            break;
+                        case rollTheDiceAnimated:
+                            rollDiceAnimated();
+                            break;
+                        case orderRun:
+                            countUp();
+                            setDiceNumber(currentDiceNumber);
+                            break;
+                        case ReverseOrderRun:
+                            countDown();
+                            setDiceNumber(currentDiceNumber);
+                            break;
+                        
+                        default:
+                            resetLedStrip();
+                            break;
                     }
-
-                    FastLED.show();                    
                     
                     // Reduce the animation count after animation
                     if (!infinityAnimation) {
                         animationCount--;
                     }
-                }                
+                    brightness = 0;
+                }
             }
-
+            
+            FastLED.setBrightness(brightness);
+            FastLED.show();
         }
+  
 
         void receiveCommand(String message) {
 
@@ -127,11 +146,10 @@ class Dice {
 
                 if (tempJson.containsKey(PROPERTY_COMMAND)) {
                     currentCommand = (command) tempJson[PROPERTY_COMMAND].as<int>();
-                    
                     resetLedStrip();
                     this -> rlog -> log(log_prefix, "New command: " + tempJson[PROPERTY_COMMAND].as<String>());
                 } else {
-                this -> rlog -> log(log_prefix, "Command was not valid");
+                    this -> rlog -> log(log_prefix, "Command was not valid");
                 }
 
                 if (tempJson.containsKey(PROPERTY_SPEED)) {
@@ -162,8 +180,7 @@ class Dice {
     void colorizeLedStrip() {
         resetLedStrip();
         for (int i=0; i < NUM_LEDS; i++ ){
-            leds[i].setColorCode(getColorAsNumber(currentColor));
-            leds[i].fadeToBlackBy(10);
+            leds[i].setColorCode(getColorAsNumber(currentColor));            
         }
     }
 
@@ -174,6 +191,13 @@ class Dice {
             randNum = random(1,7);
         }
         currentDiceNumber = randNum;
+        animationSpeed = animationSpeed * 0.7;
+        if (animationSpeed < BRIGHTNESS_CONTROL_TIME_LIMIT) {
+            if (animationSpeed < 100) {
+                animationSpeed = 100;
+            }
+            skipBrightnessControl = true;
+        }
         setDiceNumber(currentDiceNumber);        
     }
 
