@@ -31,20 +31,35 @@ class Dice {
     int animationCount = 1;
     bool infinityAnimation = false;
     String currentColor = "#FF8000";
-    bool skipBrightnessControl = false;
-
 
     // Command set which is available from outside
-    enum command {
+    enum Command {
+        showNumber, // Show a number on a dice 1-6
         singleColor, // set all pixels to actual color
         rollTheDice, // display a random number on the dice
-        rollTheDiceAnimated, // count up the dice numbers, slow down and finally stop at a random number
+        rollTheDiceAnimatedToSpinUp, // random dice numbers, spin up and finally stop at a random number
+        rollTheDiceAnimatedToSlowDown, // random dice numbers, slow down and finally stop at a random number
         orderRun, // count up the dice numbers
         ReverseOrderRun, // count down the dice numbers
+        error // in case of error, show some noticable light
     };
 
+    Command commandConvert(const String& str)
+    {
+        if(str == "showNumber") { return showNumber; }
+        if(str == "singleColor") { return singleColor; }
+        if(str == "rollTheDice") { return rollTheDice; }
+        if(str == "rollTheDiceAnimatedToSpinUp") { return rollTheDiceAnimatedToSpinUp; }
+        if(str == "rollTheDiceAnimatedToSlowDown") { return rollTheDiceAnimatedToSlowDown; }
+        if(str == "orderRun") { return orderRun; }
+        if(str == "ReverseOrderRun") { return ReverseOrderRun; }
+
+        // else
+        return error;
+    }
+
     // Helper variables
-    command currentCommand = singleColor;
+    Command currentCommand = singleColor;
     int currentDiceNumber = 1; // Always shows the real number (not an array style)
     int lastAnimationTime = 0; // Handle the delay with this (avoid delay() function)
     int lastFadeTime = 0; // Fade up light animation timer
@@ -70,7 +85,8 @@ class Dice {
         void loop() {
 
             // Fade up light
-            if (!skipBrightnessControl) {
+            // But if we want to have speed motion, skip the fade up mechanism
+            if (animationSpeed > BRIGHTNESS_CONTROL_TIME_LIMIT) {
                 if (millis() - lastFadeTime > 20) {
                     if (brightness == 0) {
                         brightness = 1.2;
@@ -86,25 +102,27 @@ class Dice {
                 brightness = 255;
             }
 
-            if (animationSpeed >= BRIGHTNESS_CONTROL_TIME_LIMIT) {
-                skipBrightnessControl = false;
-            }
-
-            if ((animationCount > 0 || infinityAnimation) && brightness == 255) {                
+            if ((animationCount > 0 || infinityAnimation) && brightness == 255) {
                 if (millis() - lastAnimationTime > animationSpeed) {                    
                     lastAnimationTime = millis();
 
                     // Strip does the animation which is in the command
                     switch (currentCommand)
                     {
+                        case showNumber:
+                            setDiceNumber(currentDiceNumber);
+                            break;
                         case singleColor:
                             colorizeLedStrip();
                             break;
                         case rollTheDice:
                             rollDice();
                             break;
-                        case rollTheDiceAnimated:
-                            rollDiceAnimated();
+                        case rollTheDiceAnimatedToSpinUp:
+                            rollDiceAnimatedToSpinUp();
+                            break;
+                        case rollTheDiceAnimatedToSlowDown:
+                            rollDiceAnimatedToSlowDown();
                             break;
                         case orderRun:
                             countUp();
@@ -113,6 +131,9 @@ class Dice {
                         case ReverseOrderRun:
                             countDown();
                             setDiceNumber(currentDiceNumber);
+                            break;
+                        case error:
+                            errorLight();                            
                             break;
                         
                         default:
@@ -124,7 +145,8 @@ class Dice {
                     if (!infinityAnimation) {
                         animationCount--;
                     }
-                    brightness = 0;
+                    // Need for the fade up to star the animation from "black"
+                    brightness = 0;                   
                 }
             }
             
@@ -136,16 +158,24 @@ class Dice {
         void receiveCommand(String message) {
 
             StaticJsonDocument<1000> tempJson; 
-            DeserializationError error = deserializeJson(tempJson, message);
+            DeserializationError Derror = deserializeJson(tempJson, message);
 
             this -> rlog -> log(log_prefix, "Message reseived: " + message);
 
-            if (error) {
-                rlog -> log(log_prefix + (String) "DeserializationError: " + error.c_str() + " (receiveCommand) " + message);
+            if (Derror) {
+                rlog -> log(log_prefix + (String) "DeserializationError: " + Derror.c_str() + " (receiveCommand) " + message);
+                currentCommand = error;
             } else {
 
                 if (tempJson.containsKey(PROPERTY_COMMAND)) {
-                    currentCommand = (command) tempJson[PROPERTY_COMMAND].as<int>();
+
+                    // Try to get a command even if that is a number or string value (both valid)
+                    String c = tempJson[PROPERTY_COMMAND].as<String>();
+                    if (is_number(c)) {
+                        currentCommand = (Command) tempJson[PROPERTY_COMMAND].as<int>();
+                    } else {
+                        currentCommand = commandConvert(c);
+                    }
                     resetLedStrip();
                     this -> rlog -> log(log_prefix, "New command: " + tempJson[PROPERTY_COMMAND].as<String>());
                 } else {
@@ -171,11 +201,29 @@ class Dice {
                     currentColor = tempJson[PROPERTY_COLOR].as<String>();
                     this -> rlog -> log(log_prefix, "Color: " + (String) currentColor);
                 }
+
+                if (tempJson.containsKey(PROPERTY_NUMBER)) {
+                    currentDiceNumber = tempJson[PROPERTY_NUMBER].as<int>();
+                    this -> rlog -> log(log_prefix, "Number: " + (String) currentDiceNumber);
+                }
             }
            
         }
 
     private:
+
+    // Colorize the led to red and flash it
+    void errorLight() {
+        animationSpeed = 300;
+        infinityAnimation = true;
+        
+        if (currentColor != "#FF0000") {
+            currentColor = "#FF0000";
+        } else {
+            currentColor = "#000000";
+        }
+        colorizeLedStrip();
+    }
 
     void colorizeLedStrip() {
         resetLedStrip();
@@ -184,7 +232,7 @@ class Dice {
         }
     }
 
-    void rollDiceAnimated() {
+    void rollDiceAnimatedToSpinUp() {
         
         int randNum = random(1,7);
         while (currentDiceNumber == randNum) {
@@ -192,13 +240,32 @@ class Dice {
         }
         currentDiceNumber = randNum;
         animationSpeed = animationSpeed * 0.7;
-        if (animationSpeed < BRIGHTNESS_CONTROL_TIME_LIMIT) {
-            if (animationSpeed < 100) {
-                animationSpeed = 100;
-            }
-            skipBrightnessControl = true;
+        
+        if (animationSpeed < 100) {
+            animationSpeed = 100;
         }
+        
         setDiceNumber(currentDiceNumber);        
+    }
+
+    void rollDiceAnimatedToSlowDown() {
+        int randNum = random(1,7);
+        while (currentDiceNumber == randNum) {
+            randNum = random(1,7);
+        }
+        currentDiceNumber = randNum;
+        animationSpeed = animationSpeed * 1.05;
+        
+        if (animationSpeed < 50) {
+            animationSpeed = 50;
+        }
+
+        // We don't want to wait forever for the next number
+        if (animationSpeed > 3000) {
+            animationSpeed = 3000;
+        }
+
+        setDiceNumber(currentDiceNumber);
     }
 
     // Random number of the dice
@@ -287,6 +354,12 @@ class Dice {
         String colorString = "0x" + colorCode.substring(1); // remove #
         uint32_t color = strtol(colorString.c_str(), NULL, 16);
         return color;
+    }
+
+    bool is_number(const String& s)
+    {
+        return !s.isEmpty() && std::find_if(s.begin(), 
+            s.end(), [](unsigned char c) { return !std::isdigit(c); }) == s.end();
     }
      
 };

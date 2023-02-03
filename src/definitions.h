@@ -26,9 +26,10 @@
 #define PROPERTY_COUNT "count"
 #define PROPERTY_INFINITY "infinity"
 #define PROPERTY_COLOR "color"
+#define PROPERTY_NUMBER "number"
 
 // Brightness control is skipped under this animation speed
-#define BRIGHTNESS_CONTROL_TIME_LIMIT 800
+#define BRIGHTNESS_CONTROL_TIME_LIMIT 400
 
 
 // Network
