@@ -5,7 +5,7 @@
 #include "WiFiUdp.h"
 #include <Callback.h>
 #include <ESPmDNS.h>
-// #include <DNSServer.h>
+#include <DNSServer.h>
 #include "log.cpp"
 #include "database.cpp"
 
@@ -20,6 +20,7 @@ class Wifi {
         bool wifi_connected = false;
         // DNSServer dnsServer; 
         Database* database;
+        DNSServer dnsServer; 
         
 
         String ssid;
@@ -44,7 +45,9 @@ class Wifi {
             WiFi.onEvent(
             [this](WiFiEvent_t event, system_event_info_t info) {
                 this->WiFiEvent(event);
-            });        
+            });
+            
+            configAP();
             WiFi.mode(WIFI_AP_STA);
 
             setupMDNS();
@@ -71,16 +74,8 @@ class Wifi {
         }
 
         void createAP() {
+            configAP();
             WiFi.mode(WIFI_AP);
-            /*
-            Maybe later
-            IPAddress apIP(192, 168, 1, 1);
-            IPAddress netMsk(255, 255, 255, 0);
-            dnsServer.setErrorReplyCode(DNSReplyCode::NoError);
-            dnsServer.start(53, "*", apIP);
-            WiFi.softAPConfig(apIP, apIP, netMsk);
-            */
-            WiFi.softAP(BOARD_NAME);
             rlog -> log(log_prefix + "AP is created from a function. Name: " + BOARD_NAME);
         }
 
@@ -198,6 +193,16 @@ class Wifi {
             } else {
                 MDNS.addService("http", "tcp", 80);
             }
+        }
+
+        void configAP() {
+            WiFi.softAP(BOARD_NAME);
+
+            // For captive portal
+            dnsServer.setErrorReplyCode(DNSReplyCode::NoError);
+            dnsServer.start(53, "*", AP_IP);
+
+            WiFi.softAPConfig(AP_IP, AP_IP, AP_NETMASK);
         }
 
 };
