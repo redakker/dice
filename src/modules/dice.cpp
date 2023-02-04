@@ -40,7 +40,7 @@ class Dice {
         rollTheDiceAnimatedToSpinUp, // random dice numbers, spin up and finally stop at a random number
         rollTheDiceAnimatedToSlowDown, // random dice numbers, slow down and finally stop at a random number
         orderRun, // count up the dice numbers
-        ReverseOrderRun, // count down the dice numbers
+        reverseOrderRun, // count down the dice numbers
         error // in case of error, show some noticable light
     };
 
@@ -52,7 +52,7 @@ class Dice {
         if(str == "rollTheDiceAnimatedToSpinUp") { return rollTheDiceAnimatedToSpinUp; }
         if(str == "rollTheDiceAnimatedToSlowDown") { return rollTheDiceAnimatedToSlowDown; }
         if(str == "orderRun") { return orderRun; }
-        if(str == "ReverseOrderRun") { return ReverseOrderRun; }
+        if(str == "reverseOrderRun") { return reverseOrderRun; }
 
         // else
         return error;
@@ -128,7 +128,7 @@ class Dice {
                             countUp();
                             setDiceNumber(currentDiceNumber);
                             break;
-                        case ReverseOrderRun:
+                        case reverseOrderRun:
                             countDown();
                             setDiceNumber(currentDiceNumber);
                             break;

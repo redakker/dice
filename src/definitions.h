@@ -1,5 +1,5 @@
 // VERSION
-#define MAJOR_VERSION 0.01
+#define MAJOR_VERSION 0.60
 
 // Board specific setings
 // board name which will be verified in its database. If does not match with the database, db will be reset
