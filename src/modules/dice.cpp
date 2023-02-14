@@ -63,7 +63,8 @@ class Dice {
     int currentDiceNumber = 1; // Always shows the real number (not an array style)
     int lastAnimationTime = 0; // Handle the delay with this (avoid delay() function)
     int lastFadeTime = 0; // Fade up light animation timer
-    float brightness = 0;
+    float brightness = 0; //Use this value to "spin up" slow the light (increase brightness during the loop)
+    int ceilBrightness = 255; // This value is for control, the user brightness. The maximum value of amount of light
     
     public:
         Dice(Log &rlog) {
@@ -94,12 +95,12 @@ class Dice {
 
                     lastFadeTime = millis();
                     brightness = brightness * 1.2;
-                    if (brightness > 255) {
-                        brightness = 255;
+                    if (brightness > ceilBrightness) {
+                        brightness = ceilBrightness;
                     }
                 }
             } else {
-                brightness = 255;
+                brightness = ceilBrightness;
             }
 
             if ((animationCount > 0 || infinityAnimation) && brightness == 255) {
@@ -206,6 +207,13 @@ class Dice {
                     currentDiceNumber = tempJson[PROPERTY_NUMBER].as<int>();
                     this -> rlog -> log(log_prefix, "Number: " + (String) currentDiceNumber);
                 }
+
+                if (tempJson.containsKey(PROPERTY_NUMBER)) {
+                    currentDiceNumber = tempJson[PROPERTY_BRIGHTNESS].as<int>();
+                    this -> rlog -> log(log_prefix, "Brightness: " + (String) ceilBrightness);
+                }
+
+                
             }
            
         }
